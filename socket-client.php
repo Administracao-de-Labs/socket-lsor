@@ -34,7 +34,7 @@ $info = json_encode([
     'operationSystem' => $operationSystem
 ]);
 
-$result = socket_write($socket, "GET_INFO_CLIENT:{$info}");
+$result = socket_write($socket, "INFO_CLIENT:{$info}");
 
 echo "Enviou dados do cliente para o servidor: {$result}\n";
 

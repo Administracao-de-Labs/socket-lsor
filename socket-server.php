@@ -74,8 +74,8 @@ while(true) {
 
         var_dump("Leu dados do cliente: {$data}\n");
         
-        if (strpos($data, 'GET_INFO_CLIENT:') !== false) {
-            $dataModified = str_replace('GET_INFO_CLIENT:', '', $data);
+        if (strpos($data, 'INFO_CLIENT:') !== false) {
+            $dataModified = str_replace('INFO_CLIENT:', '', $data);
             $clientInfo = json_decode($dataModified, true);
 
             $client += $clientInfo;
