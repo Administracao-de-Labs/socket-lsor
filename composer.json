@@ -1,0 +1,16 @@
+{
+    "name": "lucas/socket-broadcast",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Lucas\\SocketBroadcast\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Lucas Ferro",
+            "email": "lucasferrobrandao@gmail.com"
+        }
+    ],
+    "require": {}
+}

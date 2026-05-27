@@ -4,8 +4,9 @@ require 'error-handler.php';
 require 'register-shutdown-function.php';
 require 'socket-constants.php';
 
-$clients = array();
-$messages = array();
+$clientsByIpAndPort = [];
+$clientsByUuid = [];
+$messages = [];
 
 $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 
@@ -25,7 +26,7 @@ while(true) {
         
         echo "Client has connected: {$ip}:{$port}\n";
         
-        $clients["{$ip}:{$port}"] = [
+        $clientsByIpAndPort["{$ip}:{$port}"] = [
             'socket' => $newSocket, 
             'ip' => $ip, 
             'port' => $port
@@ -34,10 +35,10 @@ while(true) {
         echo "Client added to clients array\n";
 
         var_dump("Clientes:\n");
-        var_dump($clients);
+        var_dump($clientsByIpAndPort);
     }
 
-    foreach($clients as $key => &$client) {
+    foreach($clientsByIpAndPort as $key => &$client) {
         try {
             $data = socket_read($client['socket'], 1024);
         } catch (ErrorException $e) {
@@ -47,7 +48,7 @@ while(true) {
             echo "Client [$key] {$clientIp}:{$clientPort}\n";
             echo $e->getMessage() . PHP_EOL;
 
-            unset($clients[$key]);
+            unset($clientsByIpAndPort[$key]);
 
             continue;
         }
@@ -66,7 +67,7 @@ while(true) {
                 echo "Client [$key] {$clientIp}:{$clientPort}\n";
                 echo socket_strerror($socketCode) . PHP_EOL;
 
-                unset($clients[$key]);
+                unset($clientsByIpAndPort[$key]);
             }
 
             continue;
@@ -79,6 +80,24 @@ while(true) {
             $clientInfo = json_decode($dataModified, true);
 
             $client += $clientInfo;
+
+            $clientUuid = $clientInfo['uuid'] ?? null;
+
+            if (! $clientUuid) {
+                socket_write($client['socket'], "ERROR_CLIENT:uuid is required in info client event.");
+
+                socket_close($client['socket']);
+
+                unset($clientsByIpAndPort[$key]);
+
+                continue;
+            }
+
+            $clientByUuidElement = $clientsByUuid[$clientUuid] ?? null;
+
+            if (! $clientByUuidElement) {
+                $clientsByUuid[$clientUuid] = $client;
+            }
 
             echo "Recebeu informações do cliente: {$data}\n";
 
@@ -101,14 +120,14 @@ while(true) {
 
                 socket_write($client['socket'], $text);
 
-                unset($clients[$key]);
+                unset($clientsByIpAndPort[$key]);
                 
                 socket_close($client['socket']);
                 
                 continue;
             }
 
-            if (! array_key_exists('event', $requestBody)) {
+            if (! array_key_exists('event', $requestBody) || empty($requestBody['event'])) {
                 $text = <<<TEXT
                 HTTP/1.1 422 Unprocessable Entity
                 Content-Type: application/json
@@ -119,14 +138,14 @@ while(true) {
                 
                 socket_write($client['socket'], $text);
 
-                unset($clients[$key]);
+                unset($clientsByIpAndPort[$key]);
                 
                 socket_close($client['socket']);
                 
                 continue;
             }
 
-            if (! array_key_exists('channel', $requestBody)) {
+            if (! array_key_exists('channel', $requestBody) || empty($requestBody['channel'])) {
                 $text = <<<TEXT
                 HTTP/1.1 422 Unprocessable Entity
                 Content-Type: application/json
@@ -136,7 +155,7 @@ while(true) {
                 TEXT;
                 socket_write($client['socket'], $text);
 
-                unset($clients[$key]);
+                unset($clientsByIpAndPort[$key]);
                 
                 socket_close($client['socket']);
                 
@@ -150,43 +169,54 @@ while(true) {
 
             $message = "DATA_EVENT:{$message}";
 
-            foreach($clients as $key2 => $client2) {
+            $clientsByUuidElement = $clientsByUuid[$requestBody['channel']] ?? null;
 
+            if (! $clientsByUuidElement) {
                 $text = <<<TEXT
-                HTTP/1.1 200 OK
+                HTTP/1.1 404 Not Found
                 Content-Type: application/json
-                Content-Length: 40
+                Content-Length: 31
                 
-                {"message":"Evento enviado com sucesso"}
+                {"message":"Client not found."}
                 TEXT;
 
-                if ($key2 == $key) {
-                    $result = socket_write(
-                        $client2['socket'], 
-                        $text
-                    );
+                socket_write($client['socket'], $text);
 
-                    socket_close($client2['socket']);
-                    unset($clients[$key2]);
+                socket_close($client['socket']);
 
-                    continue;
-                }
-
-                $result = socket_write(
-                    $client2['socket'], 
-                    $message
-                );
-    
-                if ($result === false) {
-                    echo "Failed to send message to client2\n";
-                }
+                unset($clientsByIpAndPort[$key]);
+                
+                continue;
             }
+
+            $result = socket_write(
+                $clientsByUuidElement['socket'], 
+                $message
+            );
+
+            if ($result === false) {
+                echo "Failed to send message to client\n";
+            }
+
+            $text = <<<TEXT
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+            Content-Length: 40
+            
+            {"message":"Evento enviado com sucesso"}
+            TEXT;
+
+            socket_write($client['socket'], $text);
+
+            socket_close($client['socket']);
+
+            unset($clientsByIpAndPort[$key]);
         }
 
         if (strpos($data, 'GET /api/v1/clients HTTP') !== false) {
             $dados = explode(PHP_EOL, $data);
 
-            $clientsArray = array_map(function (array $value) {
+            $clientsByUuidArray = array_map(function (array $value) {
                 if (
                     ! array_key_exists('hostname', $value) 
                     && ! array_key_exists('username', $value) 
@@ -195,15 +225,16 @@ while(true) {
                 }
 
                 return [
+                    'uuid' => $value['uuid'] ?? 'unknown',
                     'ip' => $value['ip'], 
                     'port' => $value['port'], 
                     'hostname' => $value['hostname'] ?? 'unknown', 
                     'username' => $value['username'] ?? 'unknown', 
                     'operationSystem' => $value['operationSystem'] ?? 'unknown'
                 ];
-            }, $clients);
+            }, $clientsByUuid);
 
-            $responseBody = json_encode(array_values(array_filter($clientsArray)));
+            $responseBody = json_encode(array_values(array_filter($clientsByUuidArray)));
             $contentLength = strlen($responseBody);
 
             $text = <<<TEXT
@@ -216,7 +247,7 @@ while(true) {
             
             socket_write($client['socket'], $text);
 
-            unset($clients[$key]);
+            unset($clientsByIpAndPort[$key]);
             
             socket_close($client['socket']);
 

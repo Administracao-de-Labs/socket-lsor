@@ -31,7 +31,8 @@ echo "Conectado ao socket server\n";
 $info = json_encode([
     'hostname' => $hostname,
     'username' => $username,
-    'operationSystem' => $operationSystem
+    'operationSystem' => $operationSystem,
+    'uuid' => '123'
 ]);
 
 $result = socket_write($socket, "INFO_CLIENT:{$info}");
