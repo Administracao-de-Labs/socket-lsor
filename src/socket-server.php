@@ -48,6 +48,10 @@ while(true) {
             echo "Client [$key] {$clientIp}:{$clientPort}\n";
             echo $e->getMessage() . PHP_EOL;
 
+            if ($client['uuid'] ?? null) {
+                unset($clientsByUuid[$client['uuid']]);
+            }
+
             unset($clientsByIpAndPort[$key]);
 
             continue;
@@ -67,6 +71,10 @@ while(true) {
                 echo "Client [$key] {$clientIp}:{$clientPort}\n";
                 echo socket_strerror($socketCode) . PHP_EOL;
 
+                if ($client['uuid'] ?? null) {
+                    unset($clientsByUuid[$client['uuid']]);
+                }
+
                 unset($clientsByIpAndPort[$key]);
             }
 
@@ -84,7 +92,7 @@ while(true) {
             $clientUuid = $clientInfo['uuid'] ?? null;
 
             if (! $clientUuid) {
-                socket_write($client['socket'], "ERROR_CLIENT:uuid is required in info client event.");
+                socket_write($client['socket'], "ERROR:uuid is required in info client event.");
 
                 socket_close($client['socket']);
 
@@ -198,12 +206,23 @@ while(true) {
                 echo "Failed to send message to client\n";
             }
 
+            while (($responseBody = socket_read($clientsByUuidElement['socket'], 1024)) == false) {
+                //
+            }
+
+            echo 'Recebeu output do cliente' . PHP_EOL;
+
+            var_dump($responseBody);
+
+            $responseBodyJson = str_replace('DATA_EVENT:', '', $responseBody);
+            $strLen = strlen($responseBodyJson);
+
             $text = <<<TEXT
             HTTP/1.1 200 OK
             Content-Type: application/json
-            Content-Length: 40
+            Content-Length: {$strLen}
             
-            {"message":"Evento enviado com sucesso"}
+            {$responseBodyJson}
             TEXT;
 
             socket_write($client['socket'], $text);

