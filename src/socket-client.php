@@ -4,6 +4,10 @@ require 'error-handler.php';
 require 'register-shutdown-function.php';
 require 'socket-constants.php';
 
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+use Ramsey\Uuid\UuidFactory;
+
 $operationSystem = PHP_OS_FAMILY;
 
 if ($operationSystem == 'Windows') {
@@ -32,7 +36,7 @@ $info = json_encode([
     'hostname' => $hostname,
     'username' => $username,
     'operationSystem' => $operationSystem,
-    'uuid' => '123'
+    'uuid' => (new UuidFactory())->uuid4()
 ]);
 
 $result = socket_write($socket, "INFO_CLIENT:{$info}");

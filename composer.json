@@ -12,5 +12,8 @@
             "email": "lucasferrobrandao@gmail.com"
         }
     ],
-    "require": {}
+    "require": {
+        "php": "^7.4",
+        "ramsey/uuid": "^3.9.7"
+    }
 }
