@@ -25,6 +25,8 @@ while(true) {
         socket_getpeername($newSocket, $ip, $port);
         
         echo "Client has connected: {$ip}:{$port}\n";
+
+        socket_set_nonblock($newSocket);
         
         $clientsByIpAndPort["{$ip}:{$port}"] = [
             'socket' => $newSocket, 
