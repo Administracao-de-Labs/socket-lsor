@@ -3,6 +3,7 @@
 require 'error-handler.php';
 require 'register-shutdown-function.php';
 require 'socket-constants.php';
+require 'http-protocol-parser.php';
 
 $clientsByIpAndPort = [];
 $clientsByUuid = [];
@@ -115,9 +116,11 @@ while(true) {
         }
 
         if (strpos($data, 'POST /api/v1/events HTTP') !== false) {
-            $dados = explode(str_repeat(PHP_EOL, 2), $data);
+            $httpRequest = HttpRequestParser::parse($data) ?: '';
 
-            $requestBody = json_decode($dados[1] ?? '', true);
+            $requestBodyJson = $httpRequest ? $httpRequest->getBody() : '';
+
+            $requestBody = json_decode($requestBodyJson, true);
 
             if (! is_array($requestBody)) {
                 $text = <<<TEXT
