@@ -115,9 +115,9 @@ while(true) {
         }
 
         if (strpos($data, 'POST /api/v1/events HTTP') !== false) {
-            $dados = explode(PHP_EOL, $data);
+            $dados = explode(str_repeat(PHP_EOL, 2), $data);
 
-            $requestBody = json_decode($dados[count($dados) - 1], true);
+            $requestBody = json_decode($dados[1] ?? '', true);
 
             if (! is_array($requestBody)) {
                 $text = <<<TEXT
