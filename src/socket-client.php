@@ -65,7 +65,7 @@ while(true) {
 
         $dataArray = json_decode($dataJson, true);
 
-        $command = $dataArray['event'];
+        $command = $dataArray['event'] . ' 2>&1';
 
         echo "COMMAND: {$command}" . PHP_EOL;
 
@@ -73,14 +73,10 @@ while(true) {
 
         echo 'Executou command' . PHP_EOL;
 
-        $dataJson = json_encode([
-            'output' => $output
-        ]);
-
-        socket_write($socket, "DATA_EVENT:{$dataJson}");
+        socket_write($socket, "DATA_EVENT:{$output}");
 
         echo "Mandou ouput do command para server" . PHP_EOL;
-        var_dump($dataJson);
+        var_dump($output);
 
         continue;
     }

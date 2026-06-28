@@ -127,6 +127,7 @@ while(true) {
                 HTTP/1.1 400 Bad Request
                 Content-Type: application/json
                 Content-Length: 35
+                Access-Control-Allow-Origin: http://localhost:5173
                 
                 {"message":"Invalid request body."}
                 TEXT;
@@ -145,6 +146,7 @@ while(true) {
                 HTTP/1.1 422 Unprocessable Entity
                 Content-Type: application/json
                 Content-Length: 38
+                Access-Control-Allow-Origin: http://localhost:5173
                 
                 {"message":"event field is required."}
                 TEXT;
@@ -163,6 +165,7 @@ while(true) {
                 HTTP/1.1 422 Unprocessable Entity
                 Content-Type: application/json
                 Content-Length: 40
+                Access-Control-Allow-Origin: http://localhost:5173
                 
                 {"message":"channel field is required."}
                 TEXT;
@@ -189,6 +192,7 @@ while(true) {
                 HTTP/1.1 404 Not Found
                 Content-Type: application/json
                 Content-Length: 31
+                Access-Control-Allow-Origin: http://localhost:5173
                 
                 {"message":"Client not found."}
                 TEXT;
@@ -219,13 +223,19 @@ while(true) {
 
             var_dump($responseBody);
 
-            $responseBodyJson = str_replace('DATA_EVENT:', '', $responseBody);
-            $strLen = strlen($responseBodyJson);
+            $clientOuput = str_replace('DATA_EVENT:', '', $responseBody);
+            $responseBodyJson = $clientOuput 
+                              ? json_encode(['output' => mb_convert_encoding($clientOuput, 'UTF-8', 'UTF-8')]) 
+                              : json_encode(['output' => 'Comando não suportado']);
+
+            $responseBodyJson = $responseBodyJson ? $responseBodyJson : json_encode(['output' => 'Comando não suportado']);
+            $strLen = mb_strlen($responseBodyJson);
 
             $text = <<<TEXT
             HTTP/1.1 200 OK
             Content-Type: application/json
             Content-Length: {$strLen}
+            Access-Control-Allow-Origin: http://localhost:5173
             
             {$responseBodyJson}
             TEXT;
@@ -265,8 +275,28 @@ while(true) {
             HTTP/1.1 200 OK
             Content-Type: application/json
             Content-Length: {$contentLength}
+            Access-Control-Allow-Origin: *
             
             {$responseBody}
+            TEXT;
+            
+            socket_write($client['socket'], $text);
+
+            unset($clientsByIpAndPort[$key]);
+            
+            socket_close($client['socket']);
+
+            continue;
+        }
+
+        if (strpos($data, 'OPTIONS /api/v1/events HTTP') !== false) {
+            $text = <<<TEXT
+            HTTP/1.1 204 No Content
+            Content-Type: application/json
+            Content-Length: 0
+            Access-Control-Allow-Origin: http://localhost:5173
+            Access-Control-Allow-Methods: POST
+            Access-Control-Allow-Headers: Content-Type
             TEXT;
             
             socket_write($client['socket'], $text);
