@@ -1,8 +1,15 @@
 <?php
 
-require 'error-handler.php';
-require 'register-shutdown-function.php';
-require 'socket-constants.php';
+require __DIR__ . '/error-handler.php';
+require __DIR__ . '/register-shutdown-function.php';
+require __DIR__ . '/socket-constants.php';
+
+// Importação do parser de protocolo de acordo com a localização do arquivo na pasta src
+if (file_exists(__DIR__ . '/http-protocol-parser.php')) {
+    require __DIR__ . '/http-protocol-parser.php';
+} else {
+    require dirname(__DIR__) . '/http-protocol-parser.php';
+}
 
 // Estruturas de dados em memória para gerenciar o estado das conexões
 $clientsByIpAndPort = [];
@@ -120,14 +127,25 @@ while(true) {
             continue;
         }
 
-        // Rota HTTP POST: Recebe ordens da interface web e despacha para a máquina alvo
+        // Rota HTTP POST: Processa as ações e requisições via parser estruturado
         if (strpos($client['buffer'], 'POST /api/v1/events HTTP') !== false) {
             $parts = explode("\r\n\r\n", $client['buffer'], 2);
-            if (count($parts) < 2) continue; // Aguarda a recepção completa dos cabeçalhos e corpo
+            if (count($parts) < 2) continue;
 
-            $requestBody = json_decode($parts[1], true);
-            if (!is_array($requestBody) || empty($requestBody['event']) || empty($requestBody['channel'])) {
+            $httpRequest = HttpRequestParser::parse($client['buffer']) ?: '';
+            $requestBodyJson = $httpRequest ? $httpRequest->getBody() : '';
+            $requestBody = json_decode($requestBodyJson, true);
+
+            if (!is_array($requestBody)) {
                 $text = "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"message\":\"Invalid request body.\"}";
+                @socket_write($client['socket'], $text);
+                @socket_close($client['socket']);
+                unset($clientsByIpAndPort[$key]);
+                continue;
+            }
+
+            if (!array_key_exists('event', $requestBody) || empty($requestBody['event']) || empty($requestBody['channel'])) {
+                $text = "HTTP/1.1 422 Unprocessable Entity\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"message\":\"event and channel fields are required.\"}";
                 @socket_write($client['socket'], $text);
                 @socket_close($client['socket']);
                 unset($clientsByIpAndPort[$key]);
