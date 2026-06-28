@@ -3,13 +3,7 @@
 require __DIR__ . '/error-handler.php';
 require __DIR__ . '/register-shutdown-function.php';
 require __DIR__ . '/socket-constants.php';
-
-// Importação do parser de protocolo de acordo com a localização do arquivo na pasta src
-if (file_exists(__DIR__ . '/http-protocol-parser.php')) {
-    require __DIR__ . '/http-protocol-parser.php';
-} else {
-    require dirname(__DIR__) . '/http-protocol-parser.php';
-}
+require __DIR__ . '/http-protocol-parser.php';
 
 // Estruturas de dados em memória para gerenciar o estado das conexões
 $clientsByIpAndPort = [];
