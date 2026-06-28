@@ -1,9 +1,9 @@
 <?php
 
-require 'error-handler.php';
-require 'register-shutdown-function.php';
-require 'socket-constants.php';
-require 'http-protocol-parser.php';
+require __DIR__ . '/error-handler.php';
+require __DIR__ . '/register-shutdown-function.php';
+require __DIR__ . '/socket-constants.php';
+require __DIR__ . '/http-protocol-parser.php';
 
 // Estruturas de dados em memória para gerenciar o estado das conexões
 $clientsByIpAndPort = [];
@@ -121,7 +121,7 @@ while(true) {
             continue;
         }
 
-        // Rota HTTP POST: Integrado o HttpRequestParser enviado pela ramificação develop
+        // Rota HTTP POST: Processa as ações e requisições via parser estruturado
         if (strpos($client['buffer'], 'POST /api/v1/events HTTP') !== false) {
             $parts = explode("\r\n\r\n", $client['buffer'], 2);
             if (count($parts) < 2) continue;
@@ -184,7 +184,7 @@ while(true) {
 
             // Sanitização de codificação de caracteres legados do prompt do Windows (CP850 para UTF-8)
             if (empty($responseBodyJson) || json_decode($responseBodyJson) === null) {
-                $cleanOutput = !empty($responseBody) ? mb_convert_encoding($responseBody, 'UTF-8', 'CP850') : 'Comando executed with success.';
+                $cleanOutput = !empty($responseBody) ? mb_convert_encoding($responseBody, 'UTF-8', 'CP850') : 'Comando executado com sucesso.';
                 $cleanOutput = str_replace('DATA_EVENT:', '', $cleanOutput);
                 $responseBodyJson = json_encode(['output' => trim($cleanOutput)]);
             }
