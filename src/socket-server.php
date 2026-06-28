@@ -3,6 +3,7 @@
 require 'error-handler.php';
 require 'register-shutdown-function.php';
 require 'socket-constants.php';
+require 'http-protocol-parser.php';
 
 // Estruturas de dados em memória para gerenciar o estado das conexões
 $clientsByIpAndPort = [];
@@ -120,14 +121,25 @@ while(true) {
             continue;
         }
 
-        // Rota HTTP POST: Recebe ordens da interface web e despacha para a máquina alvo
+        // Rota HTTP POST: Integrado o HttpRequestParser enviado pela ramificação develop
         if (strpos($client['buffer'], 'POST /api/v1/events HTTP') !== false) {
             $parts = explode("\r\n\r\n", $client['buffer'], 2);
-            if (count($parts) < 2) continue; // Aguarda a recepção completa dos cabeçalhos e corpo
+            if (count($parts) < 2) continue;
 
-            $requestBody = json_decode($parts[1], true);
-            if (!is_array($requestBody) || empty($requestBody['event']) || empty($requestBody['channel'])) {
+            $httpRequest = HttpRequestParser::parse($client['buffer']) ?: '';
+            $requestBodyJson = $httpRequest ? $httpRequest->getBody() : '';
+            $requestBody = json_decode($requestBodyJson, true);
+
+            if (!is_array($requestBody)) {
                 $text = "HTTP/1.1 400 Bad Request\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"message\":\"Invalid request body.\"}";
+                @socket_write($client['socket'], $text);
+                @socket_close($client['socket']);
+                unset($clientsByIpAndPort[$key]);
+                continue;
+            }
+
+            if (!array_key_exists('event', $requestBody) || empty($requestBody['event']) || empty($requestBody['channel'])) {
+                $text = "HTTP/1.1 422 Unprocessable Entity\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"message\":\"event and channel fields are required.\"}";
                 @socket_write($client['socket'], $text);
                 @socket_close($client['socket']);
                 unset($clientsByIpAndPort[$key]);
@@ -172,7 +184,7 @@ while(true) {
 
             // Sanitização de codificação de caracteres legados do prompt do Windows (CP850 para UTF-8)
             if (empty($responseBodyJson) || json_decode($responseBodyJson) === null) {
-                $cleanOutput = !empty($responseBody) ? mb_convert_encoding($responseBody, 'UTF-8', 'CP850') : 'Comando executado com sucesso.';
+                $cleanOutput = !empty($responseBody) ? mb_convert_encoding($responseBody, 'UTF-8', 'CP850') : 'Comando executed with success.';
                 $cleanOutput = str_replace('DATA_EVENT:', '', $cleanOutput);
                 $responseBodyJson = json_encode(['output' => trim($cleanOutput)]);
             }
