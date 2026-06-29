@@ -83,7 +83,7 @@ while(true) {
             'output' => $output
         ]);
 
-        // Retorna a cadeia de caracteres sanitizada em bloco único TCP
+        // Retorna a cadeia de caracteres tratada em bloco único TCP
         socket_write($socket, "DATA_EVENT:{$dataJson}");
 
         echo "Mandou ouput do command para server" . PHP_EOL;
