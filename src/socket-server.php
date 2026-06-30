@@ -224,12 +224,15 @@ while(true) {
             var_dump($responseBody);
 
             $clientOuput = str_replace('DATA_EVENT:', '', $responseBody);
-            $responseBodyJson = $clientOuput 
-                              ? json_encode(['output' => mb_convert_encoding($clientOuput, 'UTF-8', 'UTF-8')]) 
-                              : json_encode(['output' => 'Comando não suportado']);
+            
+            if (json_decode($clientOuput) === null) {
+                $convertedOutput = mb_convert_encoding($clientOuput, 'UTF-8', 'CP850');
+                $responseBodyJson = json_encode(['output' => trim($convertedOutput)]);
+            } else {
+                $responseBodyJson = json_encode(['output' => trim($clientOuput)]);
+            }
 
-            $responseBodyJson = $responseBodyJson ? $responseBodyJson : json_encode(['output' => 'Comando não suportado']);
-            $strLen = mb_strlen($responseBodyJson);
+            $strLen = strlen($responseBodyJson);
 
             $text = <<<TEXT
             HTTP/1.1 200 OK
