@@ -215,7 +215,7 @@ while(true) {
                 echo "Failed to send message to client\n";
             }
 
-            while (($responseBody = socket_read($clientsByUuidElement['socket'], 1024)) == false) {
+            while (($responseBody = socket_read($clientsByUuidElement['socket'], 9999999)) == false) {
                 //
             }
 
@@ -225,7 +225,7 @@ while(true) {
 
             $clientOuput = str_replace('DATA_EVENT:', '', $responseBody);
             $responseBodyJson = $clientOuput 
-                              ? json_encode(['output' => mb_convert_encoding($clientOuput, 'UTF-8', 'UTF-8')]) 
+                              ? json_encode(['output' => mb_convert_encoding($clientOuput, 'UTF-8', 'IBM850')]) 
                               : json_encode(['output' => 'Comando não suportado']);
 
             $responseBodyJson = $responseBodyJson ? $responseBodyJson : json_encode(['output' => 'Comando não suportado']);

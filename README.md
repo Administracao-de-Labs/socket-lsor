@@ -1,4 +1,4 @@
-# Socket Broadcast
+# Socket LSOR
 
 Servidor e cliente em PHP que se comunicam via sockets TCP. O servidor mantém clientes conectados e expõe uma API HTTP simples para listar clientes e enviar comandos remotos a um cliente específico.
 
