@@ -225,7 +225,6 @@ while(true) {
 
             $clientOutput = str_replace('DATA_EVENT:', '', $responseBody);
             
-            // --- PEQUENA ADAPTAÇÃO MANUTIDA DO SEU COODIGO PARA CORREÇÃO DE CHARSET ---
             // Converte a string nativa do terminal do Windows (CP850) para UTF-8 caso venha crua ou quebrada
             if (json_decode($clientOutput) === null) {
                 $convertedOutput = mb_convert_encoding($clientOutput, 'UTF-8', 'CP850');
@@ -233,7 +232,6 @@ while(true) {
             } else {
                 $responseBodyJson = json_encode(['output' => trim($clientOutput)]);
             }
-            // ------------------------------------------------------------------------
 
             $strLen = strlen($responseBodyJson);
 
